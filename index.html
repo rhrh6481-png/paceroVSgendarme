@@ -3,52 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme CINEMATIC - CCO</title>
+    <title>Pasero vs Gendarme PRO - CCO</title>
     <style>
-        body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
+        body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
         canvas { display: block; width: 100%; height: 60%; border-bottom: 3px solid #ffd700; }
 
-        /* UI Superior */
-        .ui-top { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box; pointer-events: none; z-index: 10; }
+        .ui-top { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box; z-index: 10; }
         .bar-container { width: 38%; }
-        .bar { width: 100%; height: 16px; background: rgba(50,0,0,0.8); border: 2px solid #fff; border-radius: 8px; overflow: hidden; }
-        .fill { height: 100%; width: 100%; transition: width 0.3s; }
-        #hp-player { background: linear-gradient(90deg, #0f0, #004400); box-shadow: 0 0 10px #0f0; }
-        #hp-enemy { background: linear-gradient(90deg, #f00, #440000); box-shadow: 0 0 10px #f00; }
+        .bar { width: 100%; height: 16px; background: #300; border: 2px solid #fff; border-radius: 8px; overflow: hidden; }
+        .fill { height: 100%; width: 100%; transition: width 0.2s; }
+        #hp-player { background: #0f0; box-shadow: 0 0 10px #0f0; }
+        #hp-enemy { background: #f00; box-shadow: 0 0 10px #f00; }
 
         /* Controles */
-        #joystick-container { position: absolute; bottom: 35px; left: 35px; width: 130px; height: 130px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
-        #joystick-knob { position: absolute; top: 40px; left: 40px; width: 50px; height: 50px; background: radial-gradient(circle, #ffd700, #886600); border-radius: 50%; border: 2px solid #fff; }
+        #joystick-container { position: absolute; bottom: 35px; left: 35px; width: 130px; height: 130px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+        #joystick-knob { position: absolute; top: 40px; left: 40px; width: 50px; height: 50px; background: #ffd700; border-radius: 50%; border: 2px solid #fff; }
 
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
-        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; backdrop-filter: blur(8px); }
-        .circle-btn:active { transform: scale(0.85); background: rgba(255, 215, 0, 0.4); }
-        .btn-big { grid-column: span 2; width: 162px; height: 65px; border-radius: 35px; font-size: 11px; background: linear-gradient(to bottom, #440000, #220000); color: #fff; }
-        .disabled { opacity: 0.3 !important; }
+        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        .circle-btn:active { transform: scale(0.9); background: #ffd700; color: #000; }
+        .btn-big { grid-column: span 2; width: 162px; height: 60px; border-radius: 30px; }
+        .disabled { opacity: 0.3 !important; background: #555 !important; }
 
-        /* Pantallas Finales */
-        #msg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; }
-        .victory-text { font-size: 50px; color: #ffd700; font-weight: 900; text-shadow: 0 0 20px #000; animation: victoryPulse 1s infinite alternate; }
-        @keyframes victoryPulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+        #victory-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.6); z-index: 100; pointer-events: none; }
+        .victory-card { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #000; animation: bounce 0.5s infinite alternate; }
+        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.2); } }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="msg-overlay">
-            <h1 id="ko-title" class="victory-text">¡FRONTERA LIBERADA!</h1>
-            <p id="sub-msg" style="font-size: 18px; color: #fff; margin-bottom: 20px;"></p>
-            <button style="padding: 15px 40px; background: #ffd700; border: none; font-weight: bold; border-radius: 50px;" onclick="location.reload()">SIGUIENTE CARGA</button>
-        </div>
+        <div id="victory-overlay"><div class="victory-card" id="victory-text">¡VICTORIA!</div></div>
 
         <div class="ui-top">
             <div class="bar-container">
-                <div id="round-text" style="color: #ffd700; font-size: 14px; margin-bottom: 4px;">ROUND 1</div>
+                <div id="round-text" style="color:#ffd700">RD 1</div>
                 <div class="bar"><div id="hp-player" class="fill"></div></div>
             </div>
             <div class="bar-container" style="text-align: right;">
-                <div id="status-msg" style="color: #ff4444; font-size: 14px; margin-bottom: 4px;">GENDARME</div>
+                <div style="color:#f00">GENDARME</div>
                 <div class="bar"><div id="hp-enemy" class="fill"></div></div>
             </div>
         </div>
@@ -58,18 +52,18 @@
         <div id="joystick-container"><div id="joystick-knob"></div></div>
 
         <div class="action-buttons">
-            <div class="circle-btn" id="btn-1">📦<br>LONA</div>
-            <div class="circle-btn" id="btn-2">🥤<br>COCA<br><span id="coca-count" style="font-size:8px">2/2</span></div>
-            <div class="circle-btn" id="btn-shield">🛡️<br>ESCUDO</div>
-            <div class="circle-btn" id="btn-up">🚀<br>SALTO</div>
-            <div class="circle-btn btn-big" id="btn-3">💥 PATADA DE BURRO 💥<br><span id="kick-cd" style="font-size:8px">LISTO</span></div>
+            <div class="circle-btn" id="btn-up">SALTO</div>
+            <div class="circle-btn" id="btn-shield">ESCUDO</div>
+            <div class="circle-btn" id="btn-2">COCA<br><span id="coca-label">2/2</span></div>
+            <div class="circle-btn" id="btn-1">LONA</div>
+            <div class="circle-btn btn-big" id="btn-3">💥 PATADA DE BURRO 💥</div>
         </div>
     </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let screenShake = 0, timeScale = 1, gameFrame = 0, currentRound = 1, isGameOver = false;
+let screenShake = 0, timeScale = 1, currentRound = 1, isGameOver = false, gameFrame = 0;
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight * 0.6; }
 window.addEventListener('resize', resize); resize();
@@ -78,45 +72,23 @@ const sprites = { pasero: new Image(), gendarme: new Image(), fondo: new Image()
 sprites.pasero.src = 'pasero.png'; sprites.gendarme.src = 'gendarme.png'; 
 sprites.fondo.src = 'fondo.png'; sprites.lona.src = 'lona.png'; sprites.coca.src = 'coca.png';
 
-let projectiles = [], particles = [], boxes = [];
+let projectiles = [], particles = [];
 let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0;
 
-// Inicializar Cajas Destruibles
-function initBoxes() {
-    boxes = [];
-    for(let i=0; i<3; i++) {
-        boxes.push({ x: 200 + Math.random() * (canvas.width - 400), y: canvas.height - 60, w: 50, h: 50, active: true });
-    }
-}
-initBoxes();
-
-class Particle {
-    constructor(x, y, color, type = 'wood') {
-        this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random() - 0.5) * (type === 'hit' ? 15 : 8);
-        this.vy = (Math.random() - 0.5) * (type === 'hit' ? 15 : 8);
-        this.life = 1.0;
-        this.size = Math.random() * 5 + 2;
-    }
-    update() {
-        this.x += this.vx * timeScale; this.y += this.vy * timeScale;
-        this.life -= 0.02 * timeScale;
-        ctx.fillStyle = this.color; ctx.globalAlpha = this.life;
-        ctx.fillRect(this.x, this.y, this.size, this.size);
-        ctx.globalAlpha = 1;
-    }
-}
-
 class Projectile {
-    constructor({ x, y, vx, vy, owner, type = 'normal' }) {
-        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
-        this.owner = owner; this.type = type; this.angle = 0;
+    constructor(x, y, vx, vy, owner, type) {
+        this.x = x; this.y = y; 
+        let speedMod = (currentRound <= 2) ? 0.6 : 1.0;
+        this.vx = vx * speedMod; this.vy = vy * speedMod;
+        this.owner = owner; this.type = type;
     }
     update() {
         this.x += this.vx * timeScale; this.y += this.vy * timeScale;
         ctx.save();
         if (this.type === 'coca' && sprites.coca.complete) {
             ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
+        } else if (this.type === 'lona' && sprites.lona.complete) {
+            ctx.drawImage(sprites.lona, this.x-30, this.y-20, 60, 40);
         } else {
             ctx.fillStyle = this.owner === 'P' ? '#0f0' : '#f00';
             ctx.beginPath(); ctx.arc(this.x, this.y, 5, 0, Math.PI*2); ctx.fill();
@@ -130,7 +102,7 @@ class Fighter {
         this.pos = { x, y }; this.vel = { x: 0, y: 0 };
         this.width = 70; this.height = 110;
         this.health = 100; this.isEnemy = isEnemy;
-        this.flash = 0; this.isKicking = false; this.kickAngle = 0;
+        this.isShielding = false; this.isKicking = false; this.flash = 0;
     }
     draw() {
         ctx.save();
@@ -139,10 +111,17 @@ class Fighter {
         if (this.isEnemy) dir = (pasero.pos.x > this.pos.x) ? -1 : 1;
         ctx.translate(this.pos.x + this.width/2, this.pos.y + this.height/2);
         ctx.scale(dir, 1);
-        if (this.isKicking) { this.kickAngle += 0.5; ctx.rotate(this.kickAngle); }
         const img = this.isEnemy ? sprites.gendarme : sprites.pasero;
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
+
+        if (!this.isEnemy && this.isShielding && sprites.lona.complete) {
+            ctx.save();
+            ctx.globalAlpha = 0.8;
+            let lx = (pasero.pos.x < gendarme.pos.x) ? this.pos.x + 60 : this.pos.x - 40;
+            ctx.drawImage(sprites.lona, lx, this.pos.y, 50, 110);
+            ctx.restore();
+        }
     }
     update() {
         this.pos.y += this.vel.y * timeScale;
@@ -153,114 +132,113 @@ class Fighter {
 
         if (this.isEnemy && !isGameOver) {
             let speed = (0.7 + currentRound * 0.4) * (currentRound <= 2 ? 0.6 : 1);
-            let dist = Math.abs(this.pos.x - pasero.pos.x);
-            if (dist < 120) this.pos.x += (this.pos.x > pasero.pos.x ? speed : -speed) * 1.5;
-            else if (dist > 200) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
-            if (gameFrame % 90 === 0) projectiles.push(new Projectile({x: this.pos.x, y: this.pos.y+40, vx: (pasero.pos.x < this.pos.x ? -7 : 7)*(currentRound<=2?0.6:1), vy: 0, owner: 'G'}));
+            if (Math.abs(this.pos.x - pasero.pos.x) > 200) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
+            if (gameFrame % 100 === 0) projectiles.push(new Projectile(this.pos.x, this.pos.y+40, (pasero.pos.x < this.pos.x ? -7 : 7), 0, 'G', 'normal'));
         }
+        this.draw();
     }
 }
 
 let pasero = new Fighter(60, 100);
 let gendarme = new Fighter(canvas.width - 120, 100, true);
 
+function startNextRound() {
+    isGameOver = false; timeScale = 1; currentRound++;
+    document.getElementById('round-text').innerText = "RD " + currentRound;
+    document.getElementById('victory-overlay').style.display = 'none';
+    pasero.health = 100; gendarme = new Fighter(canvas.width - 120, 100, true);
+    projectiles = [];
+}
+
 function handleKO(winner) {
     isGameOver = true;
-    timeScale = 0.05; // SUPER LENTA
-    screenShake = 40;
-    setTimeout(() => {
-        document.getElementById('msg-overlay').style.display = 'flex';
-        document.getElementById('ko-title').innerText = winner === 'pasero' ? "¡FRONTERA LIBERADA!" : "ATRAPADO";
-        document.getElementById('sub-msg').innerText = winner === 'pasero' ? "La carga de CCO llegó a destino" : "Gendarmería confiscó la carga";
-    }, 1500 * 0.05);
+    timeScale = 0.1;
+    const overlay = document.getElementById('victory-overlay');
+    const text = document.getElementById('victory-text');
+    overlay.style.display = 'flex';
+    
+    if(winner === 'pasero') {
+        text.innerText = "¡VICTORIA!"; text.style.color = "#ffd700";
+        setTimeout(startNextRound, 1500);
+    } else {
+        text.innerText = "K.O."; text.style.color = "#f00";
+        setTimeout(() => location.reload(), 2000);
+    }
 }
 
-// Lógica de Joystick y Botones
-const jContainer = document.getElementById('joystick-container'), jKnob = document.getElementById('joystick-knob');
-let jActive = false;
-jContainer.addEventListener('touchstart', e => { jActive = true; moveJoystick(e); });
-window.addEventListener('touchmove', e => { if(jActive) moveJoystick(e); });
-window.addEventListener('touchend', () => { jActive = false; jKnob.style.left = '40px'; jKnob.style.top = '40px'; pasero.vel.x = 0; });
-function moveJoystick(e) {
-    const rect = jContainer.getBoundingClientRect(), touch = e.touches[0];
-    let x = touch.clientX - rect.left - rect.width/2;
-    let dist = Math.min(Math.abs(x), 50);
-    jKnob.style.left = (40 + (x > 0 ? dist : -dist)) + 'px';
-    if (x > 15) pasero.vel.x = 7; else if (x < -15) pasero.vel.x = -7; else pasero.vel.x = 0;
-}
+// Lógica de Cocas y Escudo
+const btnShield = document.getElementById('btn-shield');
+btnShield.addEventListener('touchstart', (e) => { e.preventDefault(); pasero.isShielding = true; });
+btnShield.addEventListener('touchend', (e) => { e.preventDefault(); pasero.isShielding = false; });
 
-document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y === 0) pasero.vel.y = -16; });
-document.getElementById('btn-shield').addEventListener('touchstart', () => pasero.isShielding = true);
-document.getElementById('btn-shield').addEventListener('touchend', () => pasero.isShielding = false);
-document.getElementById('btn-2').addEventListener('touchstart', () => {
-    if (cocaCargador > 0) {
+const btnCoca = document.getElementById('btn-2');
+btnCoca.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (cocaCargador > 0 && !isGameOver) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-        projectiles.push(new Projectile({x: pasero.pos.x, y: pasero.pos.y+40, vx: d*12*(currentRound<=2?0.6:1), vy: 0, owner: 'P', type: 'coca'}));
-        cocaCargador--; if(cocaCargador === 0) lastCocaTime = Date.now();
+        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y+40, d*12, 0, 'P', 'coca'));
+        cocaCargador--;
+        if(cocaCargador === 0) {
+            lastCocaTime = Date.now();
+            btnCoca.classList.add('disabled');
+        }
     }
 });
-document.getElementById('btn-3').addEventListener('touchstart', () => {
-    if (Date.now() - lastKickTime > 2000) {
-        pasero.isKicking = true; pasero.kickAngle = 0; lastKickTime = Date.now();
-        // Romper cajas
-        boxes.forEach(b => {
-            if(b.active && Math.abs(pasero.pos.x - b.x) < 100) {
-                b.active = false; screenShake = 10;
-                for(let i=0; i<15; i++) particles.push(new Particle(b.x+25, b.y+25, '#8B4513'));
-            }
-        });
-        // Golpear Gendarme
+
+document.getElementById('btn-3').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (Date.now() - lastKickTime > 2000 && !isGameOver) {
+        lastKickTime = Date.now();
         if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
             gendarme.health -= 25; gendarme.flash = 15; screenShake = 20;
-            for(let i=0; i<15; i++) particles.push(new Particle(gendarme.pos.x+30, gendarme.pos.y+50, '#ff0', 'hit'));
             if (gendarme.health <= 0) handleKO('pasero');
         }
-        setTimeout(() => pasero.isKicking = false, 500);
     }
 });
+
+// Movimiento Joystick
+const jContainer = document.getElementById('joystick-container'), jKnob = document.getElementById('joystick-knob');
+let jActive = false;
+jContainer.addEventListener('touchstart', e => { jActive = true; move(e); });
+window.addEventListener('touchmove', e => { if(jActive) move(e); });
+window.addEventListener('touchend', () => { jActive = false; jKnob.style.left = '40px'; pasero.vel.x = 0; });
+function move(e) {
+    const rect = jContainer.getBoundingClientRect(), touch = e.touches[0];
+    let x = touch.clientX - rect.left - rect.width/2;
+    jKnob.style.left = (40 + Math.max(-40, Math.min(40, x))) + 'px';
+    pasero.vel.x = x > 10 ? 7 : (x < -10 ? -7 : 0);
+}
+document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-16; });
 
 function animate() {
     ctx.save();
     if (screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (sprites.fondo.complete) ctx.drawImage(sprites.fondo, 0, 0, canvas.width, canvas.height);
-    
-    // Dibujar Cajas
-    boxes.forEach(b => {
-        if(b.active) {
-            ctx.fillStyle = '#5d4037'; ctx.fillRect(b.x, b.y, b.w, b.h);
-            ctx.strokeStyle = '#000'; ctx.strokeRect(b.x, b.y, b.w, b.h);
-            ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x+b.w, b.y+b.h); ctx.stroke();
-        }
-    });
 
     gameFrame++;
-    if(cocaCargador < 2 && Date.now() - lastCocaTime > 2000) { cocaCargador = 2; }
-    document.getElementById('coca-count').innerText = cocaCargador + "/2";
-    let cd = Math.max(0, (2000 - (Date.now() - lastKickTime))/1000).toFixed(1);
-    document.getElementById('kick-cd').innerText = cd > 0 ? cd + "s" : "LISTO";
+    // Recarga de Coca
+    if (cocaCargador < 2 && Date.now() - lastCocaTime > 2000) {
+        cocaCargador = 2;
+        btnCoca.classList.remove('disabled');
+    }
+    document.getElementById('coca-label').innerText = cocaCargador + "/2";
 
     pasero.update(); gendarme.update();
-    pasero.draw(); gendarme.draw();
-    
+
     projectiles = projectiles.filter(p => {
         p.update();
-        // Colisión con cajas
-        boxes.forEach(b => { if(b.active && p.x > b.x && p.x < b.x+b.w && p.y > b.y && p.y < b.y+b.h) { b.active = false; for(let i=0; i<10; i++) particles.push(new Particle(b.x+25, b.y+25, '#8B4513')); return false; } });
-        
         let target = p.owner === 'G' ? pasero : gendarme;
-        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 70) return false;
+        // BLOQUEO DE ESCUDO
+        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 80) return false;
+        
         if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
             target.health -= 10; target.flash = 10;
-            if (target.health <= 0 && target === pasero) handleKO('enemy');
-            if (target.health <= 0 && target === gendarme) handleKO('pasero');
+            if (target.health <= 0) handleKO(target === gendarme ? 'pasero' : 'enemy');
             return false;
         }
         return p.x > -50 && p.x < canvas.width + 50;
     });
-
-    particles.forEach(p => p.update());
-    particles = particles.filter(p => p.life > 0);
 
     document.getElementById('hp-player').style.width = pasero.health + "%";
     document.getElementById('hp-enemy').style.width = gendarme.health + "%";
