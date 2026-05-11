@@ -6,52 +6,51 @@
     <title>Pasero vs Gendarme EXTREME - CCO</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Segoe UI', 'Arial Black', sans-serif; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
-        
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 60%; border-bottom: 3px solid #ffd700; box-shadow: 0 5px 20px rgba(255, 215, 0, 0.2); }
+        canvas { display: block; width: 100%; height: 60%; border-bottom: 3px solid #ffd700; }
 
-        /* UI Moderna */
+        /* UI Superior */
         .ui-top { position: absolute; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box; pointer-events: none; z-index: 10; }
-        .bar-container { width: 38%; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8)); }
-        .bar { width: 100%; height: 16px; background: rgba(50,0,0,0.8); border: 2px solid #fff; border-radius: 8px; overflow: hidden; position: relative; }
-        .fill { height: 100%; width: 100%; transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        #hp-player { background: linear-gradient(90deg, #0f0, #004400); box-shadow: 0 0 10px #0f0; }
-        #hp-enemy { background: linear-gradient(90deg, #f00, #440000); box-shadow: 0 0 10px #f00; }
+        .bar-container { width: 38%; }
+        .bar { width: 100%; height: 16px; background: rgba(50,0,0,0.8); border: 2px solid #fff; border-radius: 8px; overflow: hidden; }
+        .fill { height: 100%; width: 100%; transition: width 0.3s; }
+        #hp-player { background: linear-gradient(90deg, #0f0, #004400); }
+        #hp-enemy { background: linear-gradient(90deg, #f00, #440000); }
         
         .lona-bar { background: rgba(50,50,50,0.8); height: 6px; width: 70%; border-radius: 3px; margin-top: 6px; border: 1px solid #fff; }
-        .lona-fill { height: 100%; background: #00f; width: 0%; box-shadow: 0 0 8px #00f; }
+        .lona-fill { height: 100%; background: #00f; width: 0%; }
 
-        /* Controles Estilo Consola */
+        /* Controles */
         #joystick-container { position: absolute; bottom: 35px; left: 35px; width: 130px; height: 130px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
-        #joystick-knob { position: absolute; top: 40px; left: 40px; width: 50px; height: 50px; background: radial-gradient(circle, #ffd700, #886600); border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        #joystick-knob { position: absolute; top: 40px; left: 40px; width: 50px; height: 50px; background: radial-gradient(circle, #ffd700, #886600); border-radius: 50%; border: 2px solid #fff; }
 
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
-        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; backdrop-filter: blur(8px); transition: 0.1s; }
-        .circle-btn:active { transform: scale(0.85); background: rgba(255, 215, 0, 0.4); border-color: #ffd700; }
-        .btn-big { grid-column: span 2; width: 162px; height: 65px; border-radius: 35px; background: linear-gradient(180deg, rgba(0,100,0,0.4), rgba(0,40,0,0.6)); font-size: 12px; }
+        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; font-weight: bold; backdrop-filter: blur(8px); }
+        .circle-btn:active { transform: scale(0.85); background: rgba(255, 215, 0, 0.4); }
+        .btn-big { grid-column: span 2; width: 162px; height: 65px; border-radius: 35px; font-size: 11px; }
+        .disabled { background: rgba(255,0,0,0.2) !important; opacity: 0.5; }
 
         #msg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        .floating-text { position: absolute; color: #ffd700; font-size: 24px; pointer-events: none; animation: floatUp 0.8s ease-out forwards; text-shadow: 2px 2px #000; font-weight: bold; }
-        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100px); opacity: 0; } }
+        .cooldown-text { font-size: 8px; color: #0ff; margin-top: 2px; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <div id="msg-overlay">
-            <h1 id="ko-title" style="font-size: 70px; margin: 0; text-shadow: 0 0 30px #f00;">K.O.</h1>
+            <h1 id="ko-title" style="font-size: 70px; margin: 0;">K.O.</h1>
             <p id="sub-msg" style="font-size: 20px; color: #ffd700; margin-bottom: 30px;"></p>
-            <button style="padding: 18px 50px; background: #ffd700; border: none; font-weight: bold; border-radius: 50px; font-size: 18px; box-shadow: 0 0 20px rgba(255,215,0,0.5);" onclick="location.reload()">VOLVER A INTENTAR</button>
+            <button style="padding: 18px 50px; background: #ffd700; border: none; font-weight: bold; border-radius: 50px; font-size: 18px;" onclick="location.reload()">REINTENTAR</button>
         </div>
 
         <div class="ui-top">
             <div class="bar-container">
-                <div id="round-text" style="color: #ffd700; font-size: 16px; margin-bottom: 5px;">ROUND 1</div>
+                <div id="round-text" style="color: #ffd700; font-size: 16px;">ROUND 1</div>
                 <div class="bar"><div id="hp-player" class="fill"></div></div>
                 <div class="lona-bar"><div id="lona-fill" class="lona-fill"></div></div>
             </div>
             <div class="bar-container" style="text-align: right;">
-                <div id="status-msg" style="color: #ff4444; font-size: 16px; margin-bottom: 5px;">GENDARME LVL 1</div>
+                <div id="status-msg" style="color: #ff4444; font-size: 16px;">GENDARME</div>
                 <div class="bar"><div id="hp-enemy" class="fill"></div></div>
             </div>
         </div>
@@ -62,10 +61,10 @@
 
         <div class="action-buttons">
             <div class="circle-btn" id="btn-1">📦<br>LONA</div>
-            <div class="circle-btn" id="btn-2">🥤<br>COCA</div>
-            <div class="circle-btn" id="btn-shield" style="background: rgba(0,0,200,0.2);">🛡️<br>ESCUDO</div>
+            <div class="circle-btn" id="btn-2">🥤<br>COCA<br><span id="coca-count" class="cooldown-text">2/2</span></div>
+            <div class="circle-btn" id="btn-shield">🛡️<br>ESCUDO</div>
             <div class="circle-btn" id="btn-up">🚀<br>SALTO</div>
-            <div class="circle-btn btn-big" id="btn-3">💥 PATADA DE BURRO 💥</div>
+            <div class="circle-btn btn-big" id="btn-3">💥 PATADA DE BURRO 💥<br><span id="kick-cd" class="cooldown-text">LISTO</span></div>
         </div>
     </div>
 
@@ -76,12 +75,21 @@ let screenShake = 0;
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight * 0.6; }
 window.addEventListener('resize', resize); resize();
 
+// VARIABLES DE BALANCEO
 let gameFrame = 0, currentRound = 1, isGameOver = false, lonaCharge = 0, timeScale = 1;
+let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0;
+const COCA_COOLDOWN = 2000, KICK_COOLDOWN = 2000;
+
 const sprites = { pasero: new Image(), gendarme: new Image(), fondo: new Image(), lona: new Image(), coca: new Image() };
 sprites.pasero.src = 'pasero.png'; sprites.gendarme.src = 'gendarme.png'; 
 sprites.fondo.src = 'fondo.png'; sprites.lona.src = 'lona.png'; sprites.coca.src = 'coca.png';
 
-let projectiles = [], enemyClones = [], particles = [];
+let projectiles = [], particles = [];
+
+// Ajustar velocidad según el Round
+function getSpeedMultiplier() {
+    return (currentRound <= 2) ? 0.6 : 1.0; 
+}
 
 class Particle {
     constructor(x, y, color) {
@@ -97,17 +105,9 @@ class Particle {
     }
 }
 
-function spawnFloatingText(text, x, y) {
-    const el = document.createElement('div');
-    el.className = 'floating-text'; el.innerText = text;
-    el.style.left = x + 'px'; el.style.top = y + 'px';
-    document.getElementById('game-container').appendChild(el);
-    setTimeout(() => el.remove(), 800);
-}
-
 class Projectile {
     constructor({ x, y, vx, vy, owner, type = 'normal' }) {
-        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.x = x; this.y = y; this.vx = vx * getSpeedMultiplier(); this.vy = vy * getSpeedMultiplier();
         this.owner = owner; this.type = type; this.angle = 0;
     }
     update() {
@@ -119,15 +119,8 @@ class Projectile {
             ctx.drawImage(sprites.lona, -35, -25, 70, 50);
         } else if (this.type === 'coca' && sprites.coca.complete) {
             ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
-        } else if (this.type === 'granada') {
-            ctx.fillStyle = '#2d5a27'; ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            ctx.fillRect(-8, -12, 16, 24);
-        } else if (this.type === 'latigo') {
-            ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + (this.vx*2), this.y + 5); ctx.stroke();
         } else {
             ctx.fillStyle = this.owner === 'P' ? '#0f0' : '#f00';
-            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
             ctx.beginPath(); ctx.arc(this.x, this.y, 5, 0, Math.PI*2); ctx.fill();
         }
         ctx.restore();
@@ -139,16 +132,16 @@ class Fighter {
         this.pos = { x, y }; this.vel = { x: 0, y: 0 };
         this.width = 70; this.height = 110;
         this.health = 100; this.isEnemy = isEnemy;
-        this.isShielding = false; this.isKicking = false; this.kickAngle = 0; this.flash = 0;
+        this.flash = 0; this.isKicking = false; this.kickAngle = 0;
     }
     draw() {
         ctx.save();
-        if (this.flash > 0) { ctx.filter = 'brightness(5) contrast(2)'; this.flash--; }
+        if (this.flash > 0) { ctx.filter = 'brightness(5)'; this.flash--; }
         let dir = (pasero.pos.x < gendarme.pos.x) ? 1 : -1;
         if (this.isEnemy) dir = (pasero.pos.x > this.pos.x) ? -1 : 1;
         ctx.translate(this.pos.x + this.width/2, this.pos.y + this.height/2);
         ctx.scale(dir, 1);
-        if (this.isKicking) { this.kickAngle += 0.5; ctx.rotate(this.kickAngle); }
+        if (this.isKicking) { this.kickAngle += 0.4; ctx.rotate(this.kickAngle); }
         const img = this.isEnemy ? sprites.gendarme : sprites.pasero;
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
@@ -161,16 +154,14 @@ class Fighter {
         this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
 
         if (this.isEnemy && !isGameOver) {
+            let speed = (0.7 + currentRound * 0.3) * getSpeedMultiplier();
             let dist = Math.abs(this.pos.x - pasero.pos.x);
-            let speed = (0.7 + currentRound * 0.35);
-            if (dist < 120) this.pos.x += (this.pos.x > pasero.pos.x ? speed : -speed) * 1.8;
-            else if (dist > 220) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
+            if (dist < 120) this.pos.x += (this.pos.x > pasero.pos.x ? speed : -speed) * 1.5;
+            else if (dist > 200) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
             
-            if (gameFrame % 85 === 0) {
+            if (gameFrame % (currentRound <= 2 ? 120 : 80) === 0) {
                 let d = pasero.pos.x < this.pos.x ? -1 : 1;
-                if (currentRound >= 3 && dist < 160) projectiles.push(new Projectile({x: this.pos.x, y: this.pos.y+50, vx: d*14, vy: 0, owner: 'G', type: 'latigo'}));
-                else if (currentRound >= 2 && Math.random() > 0.5) projectiles.push(new Projectile({x: this.pos.x, y: this.pos.y+20, vx: d*6, vy: -12, owner: 'G', type: 'granada'}));
-                else projectiles.push(new Projectile({x: this.pos.x, y: this.pos.y+40, vx: d*8, vy: 0, owner: 'G'}));
+                projectiles.push(new Projectile({x: this.pos.x, y: this.pos.y+40, vx: d*7, vy: 0, owner: 'G'}));
             }
         }
     }
@@ -179,23 +170,7 @@ class Fighter {
 let pasero = new Fighter(60, 100);
 let gendarme = new Fighter(canvas.width - 120, 100, true);
 
-function handleKO(winner) {
-    isGameOver = true; timeScale = 0.1; screenShake = 30;
-    document.getElementById('msg-overlay').style.display = 'flex';
-    const title = document.getElementById('ko-title');
-    if (winner === 'pasero') {
-        title.innerText = "¡GANASTE!"; title.style.color = "#0f0";
-        document.getElementById('sub-msg').innerText = "Venciste al Gendarme de Orán";
-        setTimeout(() => {
-            currentRound++; document.getElementById('round-text').innerText = "ROUND " + currentRound;
-            document.getElementById('status-msg').innerText = "GENDARME LVL " + currentRound;
-            pasero.health = 100; gendarme = new Fighter(canvas.width - 120, 100, true);
-            isGameOver = false; timeScale = 1; document.getElementById('msg-overlay').style.display = 'none';
-        }, 3000);
-    } else { title.innerText = "ATRAPADO"; title.style.color = "#f00"; document.getElementById('sub-msg').innerText = "Perdiste la mercadería..."; }
-}
-
-// Joystick Mejorado
+// Joystick
 const jContainer = document.getElementById('joystick-container'), jKnob = document.getElementById('joystick-knob');
 let jActive = false;
 jContainer.addEventListener('touchstart', e => { jActive = true; moveJoystick(e); });
@@ -206,9 +181,31 @@ function moveJoystick(e) {
     const rect = jContainer.getBoundingClientRect(), touch = e.touches[0];
     let x = touch.clientX - rect.left - rect.width/2, y = touch.clientY - rect.top - rect.height/2;
     const dist = Math.min(Math.sqrt(x*x + y*y), 50), angle = Math.atan2(y, x);
-    x = Math.cos(angle) * dist; y = Math.sin(angle) * dist;
-    jKnob.style.left = (40 + x) + 'px'; jKnob.style.top = (40 + y) + 'px';
+    x = Math.cos(angle) * dist;
+    jKnob.style.left = (40 + x) + 'px'; jKnob.style.top = (40 + Math.sin(angle)*dist) + 'px';
     if (x > 15) pasero.vel.x = 7; else if (x < -15) pasero.vel.x = -7; else pasero.vel.x = 0;
+}
+
+// Botones y Lógica de Recarga
+function updateCooldowns() {
+    const now = Date.now();
+    
+    // Recarga de Cocas
+    if (cocaCargador < 2 && now - lastCocaTime > COCA_COOLDOWN) {
+        cocaCargador = 2;
+        document.getElementById('btn-2').classList.remove('disabled');
+    }
+    document.getElementById('coca-count').innerText = cocaCargador + "/2";
+
+    // Recarga de Patada
+    if (now - lastKickTime < KICK_COOLDOWN) {
+        let segs = ((KICK_COOLDOWN - (now - lastKickTime))/1000).toFixed(1);
+        document.getElementById('kick-cd').innerText = "ESPERA: " + segs + "s";
+        document.getElementById('btn-3').classList.add('disabled');
+    } else {
+        document.getElementById('kick-cd').innerText = "LISTO";
+        document.getElementById('btn-3').classList.remove('disabled');
+    }
 }
 
 const setupBtn = (id, start, end) => {
@@ -216,72 +213,71 @@ const setupBtn = (id, start, end) => {
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
     if(end) btn.addEventListener('touchend', (e) => { e.preventDefault(); end(); });
 };
-setupBtn('btn-up', () => { if(pasero.vel.y === 0) pasero.vel.y = -16; });
+
+setupBtn('btn-up', () => { if(pasero.vel.y === 0) pasero.vel.y = -15; });
 setupBtn('btn-shield', () => pasero.isShielding = true, () => pasero.isShielding = false);
 setupBtn('btn-1', () => {
     if (lonaCharge >= 360) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
         projectiles.push(new Projectile({x: pasero.pos.x, y: pasero.pos.y, vx: d*8, vy: -12, owner: 'P', type: 'lona'}));
-        lonaCharge = 0; spawnFloatingText("¡LONA EXPLOSIVA!", pasero.pos.x, pasero.pos.y);
+        lonaCharge = 0;
     }
 });
 setupBtn('btn-2', () => {
-    let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-    projectiles.push(new Projectile({x: pasero.pos.x, y: pasero.pos.y+40, vx: d*12, vy: 0, owner: 'P', type: 'coca'}));
+    if (cocaCargador > 0) {
+        let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
+        projectiles.push(new Projectile({x: pasero.pos.x, y: pasero.pos.y+40, vx: d*12, vy: 0, owner: 'P', type: 'coca'}));
+        cocaCargador--;
+        if (cocaCargador === 0) lastCocaTime = Date.now();
+    }
 });
 setupBtn('btn-3', () => {
-    pasero.isKicking = true; pasero.kickAngle = 0;
-    if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
-        gendarme.health -= 22; gendarme.flash = 15; screenShake = 15;
-        for(let i=0; i<10; i++) particles.push(new Particle(gendarme.pos.x+30, gendarme.pos.y+50, '#ff0'));
-        gendarme.pos.x += (pasero.pos.x < gendarme.pos.x ? 80 : -80);
-        spawnFloatingText("¡BOOM!", gendarme.pos.x, gendarme.pos.y);
-        if (gendarme.health <= 0) handleKO('pasero');
+    const now = Date.now();
+    if (now - lastKickTime > KICK_COOLDOWN) {
+        pasero.isKicking = true; pasero.kickAngle = 0;
+        lastKickTime = now;
+        if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
+            gendarme.health -= 20; gendarme.flash = 15; screenShake = 15;
+            gendarme.pos.x += (pasero.pos.x < gendarme.pos.x ? 80 : -80);
+            if (gendarme.health <= 0) handleKO();
+        }
+        setTimeout(() => pasero.isKicking = false, 500); // Duración de la animación de giro
     }
-    setTimeout(() => { pasero.isKicking = false; }, 300);
 });
+
+function handleKO() {
+    isGameOver = true; timeScale = 0.1;
+    document.getElementById('msg-overlay').style.display = 'flex';
+    document.getElementById('sub-msg').innerText = "Pasando al Round " + (currentRound + 1);
+}
 
 function animate() {
     ctx.save();
-    if (screenShake > 0) {
-        ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
-        screenShake *= 0.9;
-    }
+    if (screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (sprites.fondo.complete) ctx.drawImage(sprites.fondo, 0, 0, canvas.width, canvas.height);
     
-    gameFrame++; pasero.update(); gendarme.update();
+    gameFrame++; updateCooldowns();
+    pasero.update(); gendarme.update();
     pasero.draw(); gendarme.draw();
     
-    if (pasero.isShielding && sprites.lona.complete) {
-        ctx.save();
-        ctx.globalAlpha = 0.7;
-        let lx = (pasero.pos.x < gendarme.pos.x) ? pasero.pos.x + 55 : pasero.pos.x - 45;
-        ctx.drawImage(sprites.lona, lx, pasero.pos.y, 50, 115);
-        ctx.restore();
-    }
-
     projectiles = projectiles.filter(p => {
         p.update();
         let target = p.owner === 'G' ? pasero : gendarme;
-        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 70) {
-            for(let i=0; i<3; i++) particles.push(new Particle(p.x, p.y, '#fff'));
-            return false;
-        }
+        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 70) return false;
         if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
-            target.health -= 8; target.flash = 8;
-            if (target.health <= 0) handleKO(target.isEnemy ? 'pasero' : 'enemy');
+            target.health -= 10; target.flash = 10;
+            if (target.health <= 0 && target === pasero) { isGameOver = true; document.getElementById('msg-overlay').style.display = 'flex'; document.getElementById('ko-title').innerText="K.O."; }
+            if (target.health <= 0 && target === gendarme) handleKO();
             return false;
         }
         return p.x > -50 && p.x < canvas.width + 50;
     });
 
-    particles = particles.filter(p => { p.update(); return p.life > 0; });
-
     document.getElementById('hp-player').style.width = pasero.health + "%";
     document.getElementById('hp-enemy').style.width = gendarme.health + "%";
     document.getElementById('lona-fill').style.width = (lonaCharge / 3.6) + "%";
-    if (Math.abs(pasero.vel.x) > 0) lonaCharge = Math.min(360, lonaCharge + 4);
+    if (Math.abs(pasero.vel.x) > 0) lonaCharge = Math.min(360, lonaCharge + 3);
     
     ctx.restore();
     requestAnimationFrame(animate);
