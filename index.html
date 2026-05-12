@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme: Lona Pro - CCO</title>
+    <title>Pasero vs Gendarme: Audio & Lona Fix - CCO</title>
     <style>
-        /* BLOQUEO DE SELECCIÓN EN TODO EL JUEGO */
         * { 
             -webkit-tap-highlight-color: transparent; 
             user-select: none; 
             -webkit-user-select: none; 
             -webkit-touch-callout: none; 
         }
-
         body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
         canvas { display: block; width: 100%; height: 60%; border-bottom: 3px solid #ffd700; }
@@ -23,7 +21,6 @@
         .fill { height: 100%; width: 100%; transition: width 0.2s; }
         #hp-player { background: #0f0; box-shadow: 0 0 10px #0f0; }
         #hp-enemy { background: #f00; box-shadow: 0 0 10px #f00; }
-
         .logo-cco { font-size: 24px; color: #fff; text-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700; font-style: italic; min-width: 60px; text-align: center; }
 
         .lona-charge-box { width: 100%; height: 6px; background: #222; border: 1px solid #fff; margin-top: 5px; border-radius: 3px; }
@@ -38,7 +35,9 @@
         .victory-card { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #000; }
     </style>
 </head>
-<body oncontextmenu="return false;"> <div id="game-container">
+<body oncontextmenu="return false;">
+
+    <div id="game-container">
         <div id="victory-overlay"><div class="victory-card" id="victory-text">¡VICTORIA!</div></div>
 
         <div class="ui-top">
@@ -70,6 +69,26 @@
     </div>
 
 <script>
+// --- CONFIGURACIÓN DE AUDIO ---
+const sounds = {
+    shoot: new Audio('disparo.mp3'), // Pon tus nombres de archivo aquí
+    hit: new Audio('golpe.mp3'),
+    jump: new Audio('salto.mp3'),
+    explosion: new Audio('explosion.mp3')
+};
+
+function playSound(id) {
+    if (sounds[id]) {
+        sounds[id].currentTime = 0;
+        sounds[id].play().catch(() => {}); // Evita errores si el archivo no existe aún
+    }
+}
+
+// Activar audio en el primer toque (Requisito de navegadores)
+window.addEventListener('touchstart', () => {
+    Object.values(sounds).forEach(s => { s.play(); s.pause(); });
+}, { once: true });
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let screenShake = 0, timeScale = 1, currentRound = 1, isGameOver = false, gameFrame = 0, freezeFrames = 0;
@@ -88,11 +107,6 @@ sprites.bala.src = 'bala.png';
 
 let projectiles = [], particles = [];
 let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0, lonaCharge = 0, isReloadingCoca = false;
-
-// Bloqueo de menú contextual en botones específicamente
-document.querySelectorAll('.circle-btn').forEach(btn => {
-    btn.addEventListener('contextmenu', e => e.preventDefault());
-});
 
 class Particle {
     constructor(x, y, color, speed = 3) {
@@ -113,27 +127,25 @@ class Projectile {
     constructor(x, y, vx, vy, owner, type) {
         this.x = x; this.y = y; this.vx = vx; this.vy = vy;
         this.owner = owner; this.type = type; this.angle = 0;
+        this.w = type === 'lona' ? 80 : (type === 'bala' ? 50 : 30);
+        this.h = type === 'lona' ? 60 : (type === 'bala' ? 50 : 30);
     }
     update() {
         this.x += this.vx * timeScale; this.y += this.vy * timeScale;
-        
-        // MODIFICACIÓN LONA: Casi recta (gravedad baja)
-        if (this.type === 'lona') { 
-            this.vy += 0.08; // Gravedad muy reducida
-            this.angle += 0.2; 
-        }
+        if (this.type === 'lona') { this.vy += 0.25; this.angle += 0.2; }
         
         let pColor = this.type === 'coca' ? '#f55' : (this.type === 'bala' ? '#ff8800' : '#fff');
         particles.push(new Particle(this.x, this.y, pColor, 2));
         
         ctx.save();
+        ctx.translate(this.x, this.y);
         if (this.type === 'coca' && sprites.coca.complete) {
-            ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
+            ctx.drawImage(sprites.coca, -15, -15, 30, 30);
         } else if (this.type === 'lona' && sprites.lona.complete) {
-            ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            ctx.rotate(this.angle);
             ctx.drawImage(sprites.lona, -40, -30, 80, 60);
         } else if (this.type === 'bala' && sprites.bala.complete) {
-            ctx.drawImage(sprites.bala, this.x-30, this.y-30, 60, 60);
+            ctx.drawImage(sprites.bala, -25, -25, 50, 50);
         }
         ctx.restore();
     }
@@ -163,8 +175,7 @@ class Fighter {
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         
         if (this.isEnemy && sprites.escopeta.complete) {
-            ctx.save();
-            ctx.scale(-1, 1); 
+            ctx.save(); ctx.scale(-1, 1); 
             ctx.drawImage(sprites.escopeta, -100, -10, 110, 45);
             ctx.restore();
         }
@@ -190,7 +201,8 @@ class Fighter {
             
             let fireRate = Math.max(90, 200 - (currentRound * 15));
             if (gameFrame % fireRate === 0) {
-                let bulletVel = (pasero.pos.x < this.pos.x ? -3.5 : 3.5);
+                playSound('shoot');
+                let bulletVel = (pasero.pos.x < this.pos.x ? -3.8 : 3.8);
                 projectiles.push(new Projectile(this.pos.x, this.pos.y + 40, bulletVel, 0, 'G', 'bala'));
             }
         }
@@ -205,6 +217,7 @@ let gendarme = new Fighter(canvas.width - 160, 100, true);
 
 function handleKO(winner) {
     isGameOver = true; timeScale = 0.1;
+    playSound('explosion');
     document.getElementById('victory-overlay').style.display = 'flex';
     if(winner === 'pasero') {
         document.getElementById('victory-text').innerText = "¡VICTORIA!";
@@ -219,11 +232,11 @@ function handleKO(winner) {
     }
 }
 
-// Botones con prevención de menú contextual
 const btnCoca = document.getElementById('btn-coca');
 btnCoca.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (cocaCargador > 0 && !isReloadingCoca && !isGameOver) {
+        playSound('shoot');
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
         projectiles.push(new Projectile(pasero.pos.x + 30*d, pasero.pos.y + 40, d*10, 0, 'P', 'coca'));
         cocaCargador--;
@@ -234,9 +247,10 @@ btnCoca.addEventListener('touchstart', (e) => {
 document.getElementById('btn-lona').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (lonaCharge >= 100 && !isGameOver) {
+        playSound('jump');
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-        // ATAQUE MÁS RECTO: vx alto, vy bajo
-        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y + 20, d*12, -2, 'P', 'lona'));
+        // Parábola equilibrada para impacto seguro
+        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y - 10, d*9, -7, 'P', 'lona'));
         lonaCharge = 0;
     }
 });
@@ -246,6 +260,7 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     if (Date.now() - lastKickTime > 2000 && !isGameOver) {
         lastKickTime = Date.now(); pasero.isKicking = true; pasero.kickAngle = 0;
         if (Math.abs(pasero.pos.x - gendarme.pos.x) < 145) {
+            playSound('hit');
             freezeFrames = 6; gendarme.health -= 25; gendarme.flash = 12; screenShake = 30;
             spawnSparks(gendarme.pos.x + 40, gendarme.pos.y + 50, '#ff0');
             if (gendarme.health <= 0) handleKO('pasero');
@@ -254,20 +269,9 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     }
 });
 
-// ESCUDO SIN MENÚ CONTEXTUAL
-document.getElementById('btn-shield').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    pasero.isShielding = true;
-});
-document.getElementById('btn-shield').addEventListener('touchend', (e) => {
-    e.preventDefault();
-    pasero.isShielding = false;
-});
-
-document.getElementById('btn-up').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if(pasero.vel.y===0) pasero.vel.y=-15; 
-});
+document.getElementById('btn-shield').addEventListener('touchstart', (e) => { e.preventDefault(); pasero.isShielding = true; });
+document.getElementById('btn-shield').addEventListener('touchend', (e) => { e.preventDefault(); pasero.isShielding = false; });
+document.getElementById('btn-up').addEventListener('touchstart', (e) => { e.preventDefault(); if(pasero.vel.y===0) { playSound('jump'); pasero.vel.y=-15; } });
 
 const jKnob = document.getElementById('joystick-knob'), jContainer = jKnob.parentElement;
 let jActive = false;
@@ -302,14 +306,22 @@ function animate() {
             return false;
         }
         let target = p.owner === 'G' ? pasero : gendarme;
-        if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
+        
+        // SISTEMA DE COLISIÓN MEJORADO (Cajas de impacto dinámicas)
+        let hitBoxX = p.type === 'lona' ? 50 : 25;
+        let hitBoxY = p.type === 'lona' ? 50 : 25;
+
+        if (p.x > target.pos.x - hitBoxX && p.x < target.pos.x + target.width + hitBoxX && 
+            p.y > target.pos.y - hitBoxY && p.y < target.pos.y + target.height + hitBoxY) {
+            
+            playSound('hit');
             target.health -= (p.type === 'lona' ? 35 : 10);
             target.flash = 12;
             spawnSparks(p.x, p.y, p.owner === 'P' ? '#ff0' : '#f00');
             if (target.health <= 0) handleKO(target === gendarme ? 'pasero' : 'enemy');
             return false;
         }
-        return p.x > -100 && p.x < canvas.width + 100;
+        return p.x > -100 && p.x < canvas.width + 100 && p.y < canvas.height + 100;
     });
 
     particles.forEach((p, index) => { p.update(); p.draw(); if(p.life <= 0) particles.splice(index, 1); });
