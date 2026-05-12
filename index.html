@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme PRO - CCO</title>
+    <title>Pasero vs Gendarme - CCO Fix</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
@@ -19,12 +19,12 @@
         .logo-cco { font-size: 24px; color: #fff; text-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700; font-style: italic; min-width: 60px; text-align: center; }
 
         .lona-charge-box { width: 100%; height: 6px; background: #222; border: 1px solid #fff; margin-top: 5px; border-radius: 3px; }
-        #lona-fill { width: 0%; height: 100%; background: #0cf; box-shadow: 0 0 8px #0cf; }
+        #lona-fill { width: 0%; height: 100%; background: #0cf; }
 
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
         .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
         .btn-big { grid-column: span 2; width: 162px; height: 60px; border-radius: 30px; }
-        .disabled { opacity: 0.3 !important; filter: grayscale(1); }
+        .disabled { opacity: 0.3 !important; background: #444 !important; }
 
         #victory-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.6); z-index: 100; pointer-events: none; }
         .victory-card { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #000; }
@@ -135,9 +135,14 @@ class Fighter {
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
         
-        if (!this.isEnemy && this.isShielding) {
-            ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = '#0cf';
-            ctx.fillRect(this.pos.x + (dir > 0 ? 60 : -20), this.pos.y, 30, this.height); ctx.restore();
+        // CORRECCIÓN: Ahora el escudo usa la imagen de la lona
+        if (!this.isEnemy && this.isShielding && sprites.lona.complete) {
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            // Posicionar la lona frente al pasero según hacia donde mira
+            let lonaX = (pasero.pos.x < gendarme.pos.x) ? this.pos.x + 50 : this.pos.x - 30;
+            ctx.drawImage(sprites.lona, lonaX, this.pos.y, 50, 110); 
+            ctx.restore();
         }
     }
     update() {
@@ -149,12 +154,9 @@ class Fighter {
 
         if (this.isEnemy && !isGameOver) {
             let speed = (0.7 + currentRound * 0.4);
-            // IA: Esquivar Cocas saltando (Round 3+)
             if (currentRound >= 3) {
                 projectiles.forEach(p => {
-                    if (p.owner === 'P' && Math.abs(p.x - this.pos.x) < 150 && this.vel.y === 0 && Math.random() < 0.05) {
-                        this.vel.y = -14;
-                    }
+                    if (p.owner === 'P' && Math.abs(p.x - this.pos.x) < 150 && this.vel.y === 0 && Math.random() < 0.05) this.vel.y = -14;
                 });
             }
             if (Math.abs(this.pos.x - pasero.pos.x) > 180) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
@@ -185,13 +187,18 @@ function handleKO(winner) {
     }
 }
 
-// Controles
-document.getElementById('btn-coca').addEventListener('touchstart', (e) => {
+// CORRECCIÓN COCA: Límite estricto de 2 cada 2 segundos
+const btnCoca = document.getElementById('btn-coca');
+btnCoca.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (cocaCargador > 0 && !isGameOver) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
         projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y+40, d*12, 0, 'P', 'coca'));
-        cocaCargador--; if(cocaCargador === 0) lastCocaTime = Date.now();
+        cocaCargador--;
+        if(cocaCargador === 0) {
+            lastCocaTime = Date.now();
+            btnCoca.classList.add('disabled');
+        }
     }
 });
 
@@ -209,9 +216,7 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     if (Date.now() - lastKickTime > 2000 && !isGameOver) {
         lastKickTime = Date.now(); pasero.isKicking = true; pasero.kickAngle = 0;
         if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
-            // FREEZE FRAME EFFECT
-            freezeFrames = 4; 
-            gendarme.health -= 25; gendarme.flash = 12; screenShake = 25;
+            freezeFrames = 4; gendarme.health -= 25; gendarme.flash = 12; screenShake = 25;
             if (gendarme.health <= 0) handleKO('pasero');
         }
         setTimeout(() => { pasero.isKicking = false; }, 500);
@@ -222,7 +227,7 @@ document.getElementById('btn-shield').addEventListener('touchstart', () => paser
 document.getElementById('btn-shield').addEventListener('touchend', () => pasero.isShielding = false);
 document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-16; });
 
-const jContainer = document.getElementById('joystick-container'), jKnob = document.getElementById('joystick-knob');
+const jKnob = document.getElementById('joystick-knob'), jContainer = jKnob.parentElement;
 let jActive = false;
 jContainer.addEventListener('touchstart', e => { jActive = true; move(e); });
 window.addEventListener('touchmove', e => { if(jActive) move(e); });
@@ -235,11 +240,7 @@ function move(e) {
 }
 
 function animate() {
-    if (freezeFrames > 0) {
-        freezeFrames--;
-        requestAnimationFrame(animate);
-        return;
-    }
+    if (freezeFrames > 0) { freezeFrames--; requestAnimationFrame(animate); return; }
 
     ctx.save();
     if (screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
@@ -247,7 +248,11 @@ function animate() {
     if (sprites.fondo.complete) ctx.drawImage(sprites.fondo, 0, 0, canvas.width, canvas.height);
 
     gameFrame++;
-    if (cocaCargador < 2 && Date.now() - lastCocaTime > 2000) { cocaCargador = 2; }
+    // Lógica de recarga de coca
+    if (cocaCargador < 2 && Date.now() - lastCocaTime > 2000) {
+        cocaCargador = 2;
+        btnCoca.classList.remove('disabled');
+    }
     document.getElementById('coca-label').innerText = cocaCargador + "/2";
     document.getElementById('lona-fill').style.width = lonaCharge + "%";
 
@@ -266,10 +271,8 @@ function animate() {
     });
 
     particles.forEach((p, index) => { p.update(); p.draw(); if(p.life <= 0) particles.splice(index, 1); });
-
     document.getElementById('hp-player').style.width = pasero.health + "%";
     document.getElementById('hp-enemy').style.width = gendarme.health + "%";
-    
     ctx.restore();
     requestAnimationFrame(animate);
 }
