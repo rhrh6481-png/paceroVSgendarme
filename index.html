@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme Shotgun Edition - CCO</title>
+    <title>Pasero vs Gendarme Cannon - CCO</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
@@ -24,7 +24,7 @@
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
         .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
         .btn-big { grid-column: span 2; width: 162px; height: 60px; border-radius: 30px; }
-        .disabled { opacity: 0.3 !important; background: #444 !important; }
+        .disabled { opacity: 0.3 !important; background: #444 !important; filter: grayscale(1); }
 
         #victory-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.6); z-index: 100; pointer-events: none; }
         .victory-card { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #000; }
@@ -72,13 +72,8 @@ function resize() { canvas.width = window.innerWidth; canvas.height = window.inn
 window.addEventListener('resize', resize); resize();
 
 const sprites = { 
-    pasero: new Image(), 
-    gendarme: new Image(), 
-    fondo: new Image(), 
-    lona: new Image(), 
-    coca: new Image(),
-    escopeta: new Image(),
-    bala: new Image()
+    pasero: new Image(), gendarme: new Image(), fondo: new Image(), 
+    lona: new Image(), coca: new Image(), escopeta: new Image(), bala: new Image() 
 };
 sprites.pasero.src = 'pasero.png'; sprites.gendarme.src = 'gendarme.png'; 
 sprites.fondo.src = 'fondo.png'; sprites.lona.src = 'lona.png'; 
@@ -86,16 +81,16 @@ sprites.coca.src = 'coca.png'; sprites.escopeta.src = 'escopeta.png';
 sprites.bala.src = 'bala.png';
 
 let projectiles = [], particles = [];
-let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0, lonaCharge = 0;
+let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0, lonaCharge = 0, isReloadingCoca = false;
 
 class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y; this.color = color;
-        this.life = 1.0; this.size = Math.random() * 4 + 2;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
+        this.life = 1.0; this.size = Math.random() * 6 + 2;
+        this.vx = (Math.random() - 0.5) * 3;
+        this.vy = (Math.random() - 0.5) * 3;
     }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; }
     draw() { ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); ctx.restore(); }
 }
 
@@ -106,25 +101,21 @@ class Projectile {
     }
     update() {
         this.x += this.vx * timeScale; this.y += this.vy * timeScale;
-        if (this.type === 'lona') { this.vy += 0.4; this.angle += 0.2; }
+        if (this.type === 'lona') { this.vy += 0.35; this.angle += 0.2; }
         
-        // Estela
-        if (gameFrame % 2 === 0) {
-            let pColor = this.type === 'coca' ? '#f00' : (this.type === 'bala' ? '#ffd700' : '#fff');
-            particles.push(new Particle(this.x, this.y, pColor));
-        }
+        // Estela de partículas mejorada
+        let pColor = this.type === 'coca' ? '#f00' : (this.type === 'bala' ? '#ffaa00' : '#0cf');
+        for(let i=0; i<2; i++) particles.push(new Particle(this.x, this.y, pColor));
         
         ctx.save();
         if (this.type === 'coca' && sprites.coca.complete) {
-            ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
+            ctx.drawImage(sprites.coca, this.x-15, this.y-15, 35, 35);
         } else if (this.type === 'lona' && sprites.lona.complete) {
             ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             ctx.drawImage(sprites.lona, -30, -20, 60, 40);
         } else if (this.type === 'bala' && sprites.bala.complete) {
-            ctx.drawImage(sprites.bala, this.x-10, this.y-5, 25, 10);
-        } else {
-            ctx.fillStyle = this.owner === 'P' ? '#0f0' : '#f00';
-            ctx.beginPath(); ctx.arc(this.x, this.y, 5, 0, Math.PI*2); ctx.fill();
+            // Bala de cañón gigante
+            ctx.drawImage(sprites.bala, this.x-25, this.y-25, 50, 50);
         }
         ctx.restore();
     }
@@ -133,7 +124,7 @@ class Projectile {
 class Fighter {
     constructor(x, y, isEnemy = false) {
         this.pos = { x, y }; this.vel = { x: 0, y: 0 };
-        this.width = 70; this.height = 110;
+        this.width = 75; this.height = 115;
         this.health = 100; this.isEnemy = isEnemy;
         this.isShielding = false; this.isKicking = false; this.kickAngle = 0; this.flash = 0;
     }
@@ -149,47 +140,46 @@ class Fighter {
         ctx.translate(this.pos.x + this.width/2, this.pos.y + this.height/2);
         ctx.scale(dir, 1);
         if (this.isKicking) { this.kickAngle += 0.4; ctx.rotate(this.kickAngle); }
+        
         const img = this.isEnemy ? sprites.gendarme : sprites.pasero;
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         
-        // DIBUJAR ESCOPETA SI ES ENEMIGO
+        // Escopeta corregida: Ahora apunta hacia afuera del gendarme
         if (this.isEnemy && sprites.escopeta.complete) {
-            // Posicionar la escopeta a la altura de las manos
-            ctx.drawImage(sprites.escopeta, 10, -10, 80, 30);
+            ctx.save();
+            ctx.scale(-1, 1); // Voltear la escopeta para que apunte bien
+            ctx.drawImage(sprites.escopeta, -90, -10, 100, 40);
+            ctx.restore();
         }
         ctx.restore();
         
         if (!this.isEnemy && this.isShielding && sprites.lona.complete) {
             ctx.save(); ctx.globalAlpha = 0.9;
-            let lonaX = (pasero.pos.x < gendarme.pos.x) ? this.pos.x + 50 : this.pos.x - 30;
-            ctx.drawImage(sprites.lona, lonaX, this.pos.y, 50, 110); 
-            ctx.restore();
+            let lonaX = (pasero.pos.x < gendarme.pos.x) ? this.pos.x + 55 : this.pos.x - 40;
+            ctx.drawImage(sprites.lona, lonaX, this.pos.y, 60, 115); ctx.restore();
         }
     }
     update() {
         this.pos.y += this.vel.y * timeScale;
-        if (this.pos.y + this.height < canvas.height - 10) this.vel.y += 0.8;
+        if (this.pos.y + this.height < canvas.height - 10) this.vel.y += 0.75;
         else { this.vel.y = 0; this.pos.y = canvas.height - 10 - this.height; }
 
-        if (!this.isEnemy && Math.abs(this.vel.x) > 0) lonaCharge = Math.min(100, lonaCharge + 0.4);
+        if (!this.isEnemy && Math.abs(this.vel.x) > 0) lonaCharge = Math.min(100, lonaCharge + 0.45);
 
         if (this.isEnemy && !isGameOver) {
-            let speed = (0.7 + currentRound * 0.4);
-            // IA: Esquivar Cocas
+            let speed = (0.6 + currentRound * 0.3);
             if (currentRound >= 3) {
                 projectiles.forEach(p => {
-                    if (p.owner === 'P' && Math.abs(p.x - this.pos.x) < 150 && this.vel.y === 0 && Math.random() < 0.05) this.vel.y = -14;
+                    if (p.owner === 'P' && Math.abs(p.x - this.pos.x) < 180 && this.vel.y === 0 && Math.random() < 0.04) this.vel.y = -13;
                 });
             }
-            if (Math.abs(this.pos.x - pasero.pos.x) > 220) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
+            if (Math.abs(this.pos.x - pasero.pos.x) > 250) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
             
-            // DIFICULTAD ESCALABLE DE DISPARO
-            let fireRate = currentRound <= 2 ? 150 : Math.max(60, 150 - (currentRound * 10));
-            let bulletSpeed = currentRound <= 2 ? 5 : 5 + (currentRound * 0.8);
-            
+            // Disparos lentos de cañón
+            let fireRate = Math.max(80, 180 - (currentRound * 10));
             if (gameFrame % fireRate === 0) {
-                let d = (pasero.pos.x < this.pos.x ? -bulletSpeed : bulletSpeed);
-                projectiles.push(new Projectile(this.pos.x + 20, this.pos.y + 45, d, 0, 'G', 'bala'));
+                let bulletVel = (pasero.pos.x < this.pos.x ? -4.5 : 4.5);
+                projectiles.push(new Projectile(this.pos.x, this.pos.y + 40, bulletVel, 0, 'G', 'bala'));
             }
         }
         this.pos.x += this.vel.x * timeScale;
@@ -217,14 +207,19 @@ function handleKO(winner) {
     }
 }
 
-// Botones y Controles
+// Lógica de Coca con límite estricto
 const btnCoca = document.getElementById('btn-coca');
 btnCoca.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (cocaCargador > 0 && !isGameOver) {
+    if (cocaCargador > 0 && !isReloadingCoca && !isGameOver) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y+40, d*12, 0, 'P', 'coca'));
-        cocaCargador--; if(cocaCargador === 0) { lastCocaTime = Date.now(); btnCoca.classList.add('disabled'); }
+        projectiles.push(new Projectile(pasero.pos.x + 30*d, pasero.pos.y + 40, d*11, 0, 'P', 'coca'));
+        cocaCargador--;
+        if(cocaCargador === 0) {
+            isReloadingCoca = true;
+            lastCocaTime = Date.now();
+            btnCoca.classList.add('disabled');
+        }
     }
 });
 
@@ -232,7 +227,7 @@ document.getElementById('btn-lona').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (lonaCharge >= 100 && !isGameOver) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y, d*8, -10, 'P', 'lona'));
+        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y, d*7, -11, 'P', 'lona'));
         lonaCharge = 0;
     }
 });
@@ -241,8 +236,8 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (Date.now() - lastKickTime > 2000 && !isGameOver) {
         lastKickTime = Date.now(); pasero.isKicking = true; pasero.kickAngle = 0;
-        if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
-            freezeFrames = 4; gendarme.health -= 25; gendarme.flash = 12; screenShake = 25;
+        if (Math.abs(pasero.pos.x - gendarme.pos.x) < 140) {
+            freezeFrames = 5; gendarme.health -= 25; gendarme.flash = 12; screenShake = 28;
             if (gendarme.health <= 0) handleKO('pasero');
         }
         setTimeout(() => { pasero.isKicking = false; }, 500);
@@ -251,7 +246,7 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
 
 document.getElementById('btn-shield').addEventListener('touchstart', () => pasero.isShielding = true);
 document.getElementById('btn-shield').addEventListener('touchend', () => pasero.isShielding = false);
-document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-16; });
+document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-15.5; });
 
 const jKnob = document.getElementById('joystick-knob'), jContainer = jKnob.parentElement;
 let jActive = false;
@@ -267,14 +262,18 @@ function move(e) {
 
 function animate() {
     if (freezeFrames > 0) { freezeFrames--; requestAnimationFrame(animate); return; }
-
     ctx.save();
     if (screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (sprites.fondo.complete) ctx.drawImage(sprites.fondo, 0, 0, canvas.width, canvas.height);
 
     gameFrame++;
-    if (cocaCargador < 2 && Date.now() - lastCocaTime > 2000) { cocaCargador = 2; btnCoca.classList.remove('disabled'); }
+    // Recarga de Coca Estricta
+    if (isReloadingCoca && Date.now() - lastCocaTime > 2000) {
+        cocaCargador = 2;
+        isReloadingCoca = false;
+        btnCoca.classList.remove('disabled');
+    }
     document.getElementById('coca-label').innerText = cocaCargador + "/2";
     document.getElementById('lona-fill').style.width = lonaCharge + "%";
 
@@ -282,14 +281,14 @@ function animate() {
 
     projectiles = projectiles.filter(p => {
         p.update();
-        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 80) return false;
+        if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 85) return false;
         let target = p.owner === 'G' ? pasero : gendarme;
         if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
             target.health -= 10; target.flash = 12;
             if (target.health <= 0) handleKO(target === gendarme ? 'pasero' : 'enemy');
             return false;
         }
-        return p.x > -50 && p.x < canvas.width + 50;
+        return p.x > -100 && p.x < canvas.width + 100;
     });
 
     particles.forEach((p, index) => { p.update(); p.draw(); if(p.life <= 0) particles.splice(index, 1); });
