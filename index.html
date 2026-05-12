@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme: Chispas y Fuego - CCO</title>
+    <title>Pasero vs Gendarme: Lona Pro - CCO</title>
     <style>
+        /* BLOQUEO DE SELECCIÓN EN TODO EL JUEGO */
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            -webkit-touch-callout: none; 
+        }
+
         body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
         canvas { display: block; width: 100%; height: 60%; border-bottom: 3px solid #ffd700; }
@@ -22,7 +30,7 @@
         #lona-fill { width: 0%; height: 100%; background: #0cf; }
 
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
-        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+        .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; }
         .btn-big { grid-column: span 2; width: 162px; height: 60px; border-radius: 30px; }
         .disabled { opacity: 0.3 !important; filter: grayscale(1); }
 
@@ -30,9 +38,7 @@
         .victory-card { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #000; }
     </style>
 </head>
-<body>
-
-    <div id="game-container">
+<body oncontextmenu="return false;"> <div id="game-container">
         <div id="victory-overlay"><div class="victory-card" id="victory-text">¡VICTORIA!</div></div>
 
         <div class="ui-top">
@@ -83,6 +89,11 @@ sprites.bala.src = 'bala.png';
 let projectiles = [], particles = [];
 let cocaCargador = 2, lastCocaTime = 0, lastKickTime = 0, lonaCharge = 0, isReloadingCoca = false;
 
+// Bloqueo de menú contextual en botones específicamente
+document.querySelectorAll('.circle-btn').forEach(btn => {
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+});
+
 class Particle {
     constructor(x, y, color, speed = 3) {
         this.x = x; this.y = y; this.color = color;
@@ -105,9 +116,13 @@ class Projectile {
     }
     update() {
         this.x += this.vx * timeScale; this.y += this.vy * timeScale;
-        if (this.type === 'lona') { this.vy += 0.3; this.angle += 0.15; }
         
-        // Estelas de partículas (Fuego/Humo)
+        // MODIFICACIÓN LONA: Casi recta (gravedad baja)
+        if (this.type === 'lona') { 
+            this.vy += 0.08; // Gravedad muy reducida
+            this.angle += 0.2; 
+        }
+        
         let pColor = this.type === 'coca' ? '#f55' : (this.type === 'bala' ? '#ff8800' : '#fff');
         particles.push(new Particle(this.x, this.y, pColor, 2));
         
@@ -116,7 +131,7 @@ class Projectile {
             ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
         } else if (this.type === 'lona' && sprites.lona.complete) {
             ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            ctx.drawImage(sprites.lona, -30, -20, 60, 40);
+            ctx.drawImage(sprites.lona, -40, -30, 80, 60);
         } else if (this.type === 'bala' && sprites.bala.complete) {
             ctx.drawImage(sprites.bala, this.x-30, this.y-30, 60, 60);
         }
@@ -145,14 +160,11 @@ class Fighter {
         if (this.isKicking) { this.kickAngle += 0.4; ctx.rotate(this.kickAngle); }
         
         const img = this.isEnemy ? sprites.gendarme : sprites.pasero;
-        // DIBUJAR CUERPO
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         
-        // DIBUJAR ESCOPETA (AHORA DELANTE DEL GENDARME)
         if (this.isEnemy && sprites.escopeta.complete) {
             ctx.save();
             ctx.scale(-1, 1); 
-            // Posicionada sobre los brazos
             ctx.drawImage(sprites.escopeta, -100, -10, 110, 45);
             ctx.restore();
         }
@@ -170,13 +182,12 @@ class Fighter {
         if (this.pos.y + this.height < canvas.height - 10) this.vel.y += 0.7;
         else { this.vel.y = 0; this.pos.y = canvas.height - 10 - this.height; }
 
-        if (!this.isEnemy && Math.abs(this.vel.x) > 0) lonaCharge = Math.min(100, lonaCharge + 0.4);
+        if (!this.isEnemy && Math.abs(this.vel.x) > 0) lonaCharge = Math.min(100, lonaCharge + 0.45);
 
         if (this.isEnemy && !isGameOver) {
             let speed = (0.5 + currentRound * 0.3);
             if (Math.abs(this.pos.x - pasero.pos.x) > 280) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
             
-            // DISPARO MÁS LENTO (VELOCIDAD BAJADA DE 4.5 A 3.5)
             let fireRate = Math.max(90, 200 - (currentRound * 15));
             if (gameFrame % fireRate === 0) {
                 let bulletVel = (pasero.pos.x < this.pos.x ? -3.5 : 3.5);
@@ -208,7 +219,7 @@ function handleKO(winner) {
     }
 }
 
-// Botones
+// Botones con prevención de menú contextual
 const btnCoca = document.getElementById('btn-coca');
 btnCoca.addEventListener('touchstart', (e) => {
     e.preventDefault();
@@ -224,7 +235,8 @@ document.getElementById('btn-lona').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (lonaCharge >= 100 && !isGameOver) {
         let d = pasero.pos.x < gendarme.pos.x ? 1 : -1;
-        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y, d*6, -10, 'P', 'lona'));
+        // ATAQUE MÁS RECTO: vx alto, vy bajo
+        projectiles.push(new Projectile(pasero.pos.x, pasero.pos.y + 20, d*12, -2, 'P', 'lona'));
         lonaCharge = 0;
     }
 });
@@ -242,13 +254,24 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     }
 });
 
-document.getElementById('btn-shield').addEventListener('touchstart', () => pasero.isShielding = true);
-document.getElementById('btn-shield').addEventListener('touchend', () => pasero.isShielding = false);
-document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-15; });
+// ESCUDO SIN MENÚ CONTEXTUAL
+document.getElementById('btn-shield').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    pasero.isShielding = true;
+});
+document.getElementById('btn-shield').addEventListener('touchend', (e) => {
+    e.preventDefault();
+    pasero.isShielding = false;
+});
+
+document.getElementById('btn-up').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if(pasero.vel.y===0) pasero.vel.y=-15; 
+});
 
 const jKnob = document.getElementById('joystick-knob'), jContainer = jKnob.parentElement;
 let jActive = false;
-jContainer.addEventListener('touchstart', e => { jActive = true; move(e); });
+jContainer.addEventListener('touchstart', e => { e.preventDefault(); jActive = true; move(e); });
 window.addEventListener('touchmove', e => { if(jActive) move(e); });
 window.addEventListener('touchend', () => { jActive = false; jKnob.style.left = '40px'; pasero.vel.x = 0; });
 function move(e) {
@@ -275,13 +298,14 @@ function animate() {
     projectiles = projectiles.filter(p => {
         p.update();
         if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 85) {
-            spawnSparks(p.x, p.y, '#0cf'); // Chispas azules al chocar con escudo
+            spawnSparks(p.x, p.y, '#0cf');
             return false;
         }
         let target = p.owner === 'G' ? pasero : gendarme;
         if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
-            target.health -= 10; target.flash = 12;
-            spawnSparks(p.x, p.y, '#f00'); // Chispas rojas al impactar
+            target.health -= (p.type === 'lona' ? 35 : 10);
+            target.flash = 12;
+            spawnSparks(p.x, p.y, p.owner === 'P' ? '#ff0' : '#f00');
             if (target.health <= 0) handleKO(target === gendarme ? 'pasero' : 'enemy');
             return false;
         }
