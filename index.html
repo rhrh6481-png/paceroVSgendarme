@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pasero vs Gendarme EXTREME - CCO</title>
+    <title>Pasero vs Gendarme PRO - CCO</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
         #game-container { position: relative; width: 100vw; height: 100vh; background: #111; overflow: hidden; }
@@ -19,7 +19,7 @@
         .logo-cco { font-size: 24px; color: #fff; text-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700; font-style: italic; min-width: 60px; text-align: center; }
 
         .lona-charge-box { width: 100%; height: 6px; background: #222; border: 1px solid #fff; margin-top: 5px; border-radius: 3px; }
-        #lona-fill { width: 0%; height: 100%; background: #0cf; box-shadow: 0 0 8px #0cf; transition: width 0.1s; }
+        #lona-fill { width: 0%; height: 100%; background: #0cf; box-shadow: 0 0 8px #0cf; }
 
         .action-buttons { position: absolute; bottom: 25px; right: 20px; display: grid; grid-template-columns: repeat(2, 75px); gap: 12px; }
         .circle-btn { width: 75px; height: 75px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
@@ -66,7 +66,7 @@
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let screenShake = 0, timeScale = 1, currentRound = 1, isGameOver = false, gameFrame = 0;
+let screenShake = 0, timeScale = 1, currentRound = 1, isGameOver = false, gameFrame = 0, freezeFrames = 0;
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight * 0.6; }
 window.addEventListener('resize', resize); resize();
@@ -82,14 +82,11 @@ class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y; this.color = color;
         this.life = 1.0; this.size = Math.random() * 4 + 2;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-    }
-    draw() {
-        ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.size, this.size); ctx.restore();
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
     }
     update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    draw() { ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); ctx.restore(); }
 }
 
 class Projectile {
@@ -100,11 +97,8 @@ class Projectile {
     update() {
         this.x += this.vx * timeScale; this.y += this.vy * timeScale;
         if (this.type === 'lona') { this.vy += 0.4; this.angle += 0.2; }
+        if (gameFrame % 2 === 0) particles.push(new Particle(this.x, this.y, this.type === 'coca' ? '#f00' : '#0cf'));
         
-        // Estela de partículas
-        let pColor = this.type === 'coca' ? '#f00' : (this.type === 'lona' ? '#0cf' : '#fff');
-        particles.push(new Particle(this.x, this.y, pColor));
-
         ctx.save();
         if (this.type === 'coca' && sprites.coca.complete) {
             ctx.drawImage(sprites.coca, this.x-15, this.y-15, 30, 30);
@@ -124,17 +118,14 @@ class Fighter {
         this.pos = { x, y }; this.vel = { x: 0, y: 0 };
         this.width = 70; this.height = 110;
         this.health = 100; this.isEnemy = isEnemy;
-        this.isShielding = false; this.isKicking = false; this.kickAngle = 0; 
-        this.flash = 0; // Temporizador para el parpadeo
+        this.isShielding = false; this.isKicking = false; this.kickAngle = 0; this.flash = 0;
     }
     draw() {
         ctx.save();
-        // Efecto parpadeo Blanco/Rojo
         if (this.flash > 0) {
             ctx.filter = (this.flash % 4 < 2) ? 'brightness(10) sepia(1) saturate(100) hue-rotate(-50deg)' : 'brightness(10)';
             this.flash--;
         }
-        
         let dir = (pasero.pos.x < gendarme.pos.x) ? 1 : -1;
         if (this.isEnemy) dir = (pasero.pos.x > this.pos.x) ? -1 : 1;
         ctx.translate(this.pos.x + this.width/2, this.pos.y + this.height/2);
@@ -143,31 +134,34 @@ class Fighter {
         const img = this.isEnemy ? sprites.gendarme : sprites.pasero;
         if (img.complete) ctx.drawImage(img, -this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
-
-        if (!this.isEnemy && this.isShielding && sprites.lona.complete) {
-            ctx.save(); ctx.globalAlpha = 0.8;
-            let lx = (pasero.pos.x < gendarme.pos.x) ? this.pos.x + 60 : this.pos.x - 40;
-            ctx.drawImage(sprites.lona, lx, this.pos.y, 50, 110); ctx.restore();
+        
+        if (!this.isEnemy && this.isShielding) {
+            ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = '#0cf';
+            ctx.fillRect(this.pos.x + (dir > 0 ? 60 : -20), this.pos.y, 30, this.height); ctx.restore();
         }
     }
     update() {
         this.pos.y += this.vel.y * timeScale;
         if (this.pos.y + this.height < canvas.height - 10) this.vel.y += 0.8;
         else { this.vel.y = 0; this.pos.y = canvas.height - 10 - this.height; }
-        
-        // Cargar lona al mover
-        if (!this.isEnemy && Math.abs(this.vel.x) > 0) {
-            lonaCharge = Math.min(100, lonaCharge + 0.5);
-        }
 
-        this.pos.x += this.vel.x * timeScale;
-        this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
+        if (!this.isEnemy && Math.abs(this.vel.x) > 0) lonaCharge = Math.min(100, lonaCharge + 0.4);
 
         if (this.isEnemy && !isGameOver) {
             let speed = (0.7 + currentRound * 0.4);
-            if (Math.abs(this.pos.x - pasero.pos.x) > 200) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
+            // IA: Esquivar Cocas saltando (Round 3+)
+            if (currentRound >= 3) {
+                projectiles.forEach(p => {
+                    if (p.owner === 'P' && Math.abs(p.x - this.pos.x) < 150 && this.vel.y === 0 && Math.random() < 0.05) {
+                        this.vel.y = -14;
+                    }
+                });
+            }
+            if (Math.abs(this.pos.x - pasero.pos.x) > 180) this.pos.x += (pasero.pos.x > this.pos.x ? speed : -speed);
             if (gameFrame % 100 === 0) projectiles.push(new Projectile(this.pos.x, this.pos.y+40, (pasero.pos.x < this.pos.x ? -7 : 7), 0, 'G', 'normal'));
         }
+        this.pos.x += this.vel.x * timeScale;
+        this.pos.x = Math.max(0, Math.min(canvas.width - this.width, this.pos.x));
         this.draw();
     }
 }
@@ -177,14 +171,13 @@ let gendarme = new Fighter(canvas.width - 120, 100, true);
 
 function handleKO(winner) {
     isGameOver = true; timeScale = 0.1;
-    const overlay = document.getElementById('victory-overlay');
-    overlay.style.display = 'flex';
+    document.getElementById('victory-overlay').style.display = 'flex';
     if(winner === 'pasero') {
         document.getElementById('victory-text').innerText = "¡VICTORIA!";
         setTimeout(() => {
             currentRound++; document.getElementById('round-text').innerText = "RD " + currentRound;
             pasero.health = 100; lonaCharge = 0; gendarme = new Fighter(canvas.width - 120, 100, true);
-            isGameOver = false; timeScale = 1; overlay.style.display = 'none';
+            isGameOver = false; timeScale = 1; document.getElementById('victory-overlay').style.display = 'none';
         }, 1500);
     } else {
         document.getElementById('victory-text').innerText = "K.O.";
@@ -192,7 +185,7 @@ function handleKO(winner) {
     }
 }
 
-// Botones
+// Controles
 document.getElementById('btn-coca').addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (cocaCargador > 0 && !isGameOver) {
@@ -216,7 +209,9 @@ document.getElementById('btn-kick').addEventListener('touchstart', (e) => {
     if (Date.now() - lastKickTime > 2000 && !isGameOver) {
         lastKickTime = Date.now(); pasero.isKicking = true; pasero.kickAngle = 0;
         if (Math.abs(pasero.pos.x - gendarme.pos.x) < 130) {
-            gendarme.health -= 25; gendarme.flash = 12; screenShake = 20;
+            // FREEZE FRAME EFFECT
+            freezeFrames = 4; 
+            gendarme.health -= 25; gendarme.flash = 12; screenShake = 25;
             if (gendarme.health <= 0) handleKO('pasero');
         }
         setTimeout(() => { pasero.isKicking = false; }, 500);
@@ -227,7 +222,6 @@ document.getElementById('btn-shield').addEventListener('touchstart', () => paser
 document.getElementById('btn-shield').addEventListener('touchend', () => pasero.isShielding = false);
 document.getElementById('btn-up').addEventListener('touchstart', () => { if(pasero.vel.y===0) pasero.vel.y=-16; });
 
-// Joystick
 const jContainer = document.getElementById('joystick-container'), jKnob = document.getElementById('joystick-knob');
 let jActive = false;
 jContainer.addEventListener('touchstart', e => { jActive = true; move(e); });
@@ -241,6 +235,12 @@ function move(e) {
 }
 
 function animate() {
+    if (freezeFrames > 0) {
+        freezeFrames--;
+        requestAnimationFrame(animate);
+        return;
+    }
+
     ctx.save();
     if (screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake *= 0.9; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -258,7 +258,7 @@ function animate() {
         if (p.owner === 'G' && pasero.isShielding && Math.abs(p.x - pasero.pos.x) < 80) return false;
         let target = p.owner === 'G' ? pasero : gendarme;
         if (p.x > target.pos.x && p.x < target.pos.x + target.width && p.y > target.pos.y && p.y < target.pos.y + target.height) {
-            target.health -= 10; target.flash = 12; // Inicia parpadeo bicolor
+            target.health -= 10; target.flash = 12;
             if (target.health <= 0) handleKO(target === gendarme ? 'pasero' : 'enemy');
             return false;
         }
